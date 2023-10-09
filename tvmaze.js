@@ -10784,6 +10784,12 @@ var $searchForm = $("#searchForm");
 var $episodesList = $("#episodesList");
 var DEFAULT_IMAGE = "https://tinyurl.com/tv-missing";
 var BASE_URL = "https://api.tvmaze.com"; //?q=girls
+/** Given a search term, search for tv shows that match that query.
+ *
+ *  Returns (promise) array of show objects: [show, show, ...].
+ *    Each show object should contain exactly: {id, name, summary, image}
+ *    (if no image URL given by API, put in a default image URL)
+ */
 function searchShowsByTerm(term) {
     return __awaiter(this, void 0, void 0, function () {
         var params, response, parsed, showData;
@@ -10805,10 +10811,10 @@ function searchShowsByTerm(term) {
                         var showInfo = {
                             id: id,
                             name: name,
-                            summary: summary
+                            summary: summary,
+                            image: image ? image : DEFAULT_IMAGE
                         };
-                        if (image)
-                            showInfo.image = image;
+                        // if (image) showInfo.image = image;
                         return showInfo;
                     });
                     return [2 /*return*/, showData];
@@ -10838,7 +10844,7 @@ function searchForShowAndDisplay() {
                     return [4 /*yield*/, searchShowsByTerm(term)];
                 case 1:
                     shows = _a.sent();
-                    console.log("shows list is: ", shows);
+                    // console.log("shows list is: ", shows);
                     $episodesArea.hide();
                     populateShows(shows);
                     return [2 /*return*/];
