@@ -10781,13 +10781,8 @@ var $ = jquery_1.default;
 var $showsList = $("#showsList");
 var $episodesArea = $("#episodesArea");
 var $searchForm = $("#searchForm");
-var BASE_URL = "https://api.tvmaze.com/search/shows"; //?q=girls
-/** Given a search term, search for tv shows that match that query.
- *
- *  Returns (promise) array of show objects: [show, show, ...].
- *    Each show object should contain exactly: {id, name, summary, image}
- *    (if no image URL given by API, put in a default image URL)
- */
+var DEFAULT_IMAGE = "https://tinyurl.com/tv-missing";
+var BASE_URL = "https://api.tvmaze.com"; //?q=girls
 function searchShowsByTerm(term) {
     return __awaiter(this, void 0, void 0, function () {
         var params, response, parsed, showData;
@@ -10795,22 +10790,27 @@ function searchShowsByTerm(term) {
             switch (_a.label) {
                 case 0:
                     params = new URLSearchParams({ q: term });
-                    return [4 /*yield*/, fetch("".concat(BASE_URL, "?").concat(params))];
+                    return [4 /*yield*/, fetch("".concat(BASE_URL, "/search/shows?").concat(params))];
                 case 1:
                     response = _a.sent();
                     return [4 /*yield*/, response.json()];
                 case 2:
                     parsed = _a.sent();
+                    console.log("parsed", parsed);
                     if (Array.isArray(parsed)) {
-                        showData = parsed.map(function (show) {
+                        showData = parsed.map(function (_a) {
+                            var _b;
+                            var show = _a.show;
+                            console.log("show", show);
                             var name = show.name, id = show.id, summary = show.summary;
-                            var image = show.image.original;
+                            var image = (_b = show === null || show === void 0 ? void 0 : show.image) === null || _b === void 0 ? void 0 : _b.original;
                             var showInfo = {
                                 id: id,
                                 name: name,
-                                summary: summary,
-                                image: image
+                                summary: summary
                             };
+                            if (image)
+                                showInfo.image = image;
                             return showInfo;
                         });
                         return [2 /*return*/, showData];
@@ -10825,7 +10825,7 @@ function populateShows(shows) {
     $showsList.empty();
     for (var _i = 0, shows_1 = shows; _i < shows_1.length; _i++) {
         var show = shows_1[_i];
-        var $show = $("<div data-show-id=\"".concat(show.id, "\" class=\"Show col-md-12 col-lg-6 mb-4\">\n         <div class=\"media\">\n           <img\n              src=\"http://static.tvmaze.com/uploads/images/medium_portrait/160/401704.jpg\"\n              alt=\"Bletchly Circle San Francisco\"\n              class=\"w-25 me-3\">\n           <div class=\"media-body\">\n             <h5 class=\"text-primary\">").concat(show.name, "</h5>\n             <div><small>").concat(show.summary, "</small></div>\n             <button class=\"btn btn-outline-light btn-sm Show-getEpisodes\">\n               Episodes\n             </button>\n           </div>\n         </div>\n       </div>\n      "));
+        var $show = $("<div data-show-id=\"".concat(show.id, "\" class=\"Show col-md-12 col-lg-6 mb-4\">\n         <div class=\"media\">\n           <img\n              src=").concat(show.image ? show.image : DEFAULT_IMAGE, "\n              alt=").concat(show.name, "\n              class=\"w-25 me-3\">\n           <div class=\"media-body\">\n             <h5 class=\"text-primary\">").concat(show.name, "</h5>\n             <div><small>").concat(show.summary, "</small></div>\n             <button class=\"btn btn-outline-light btn-sm Show-getEpisodes\">\n               Episodes\n             </button>\n           </div>\n         </div>\n       </div>\n      "));
         $showsList.append($show);
     }
 }
@@ -10863,10 +10863,26 @@ $searchForm.on("submit", function (evt) {
         });
     });
 });
-/** Given a show ID, get from API and return (promise) array of episodes:
- *      { id, name, season, number }
- */
-// async function getEpisodesOfShow(id) { }
+function getEpisodesOfShow(id) {
+    return __awaiter(this, void 0, void 0, function () {
+        var response, data, episodeData;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, fetch("".concat(BASE_URL, "/shows/").concat(id, "/episodes"))];
+                case 1:
+                    response = _a.sent();
+                    return [4 /*yield*/, response.json()];
+                case 2:
+                    data = _a.sent();
+                    episodeData = data.map(function (e) {
+                        var id = e.id, name = e.name, season = e.season, number = e.number;
+                        return { id: id, name: name, season: season, number: number };
+                    });
+                    return [2 /*return*/, episodeData];
+            }
+        });
+    });
+}
 /** Write a clear docstring for this function... */
 // function populateEpisodes(episodes) { }
 

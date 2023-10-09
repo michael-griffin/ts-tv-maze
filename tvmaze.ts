@@ -7,7 +7,9 @@ const $showsList = $("#showsList");
 const $episodesArea = $("#episodesArea");
 const $searchForm = $("#searchForm");
 
-const BASE_URL = "https://api.tvmaze.com/search/shows"; //?q=girls
+const DEFAULT_IMAGE = "https://tinyurl.com/tv-missing";
+
+const BASE_URL = "https://api.tvmaze.com"; //?q=girls
 
 /** Given a search term, search for tv shows that match that query.
  *
@@ -16,35 +18,48 @@ const BASE_URL = "https://api.tvmaze.com/search/shows"; //?q=girls
  *    (if no image URL given by API, put in a default image URL)
  */
 
+interface showInterface {
+  id: number;
+  name: string;
+  summary: string;
+  image?: string;
+}
+
+
 async function searchShowsByTerm(term: string) {
   // ADD: Remove placeholder & make request to TVMaze search shows API.
 
   const params = new URLSearchParams({ q: term });
-  const response = await fetch(`${BASE_URL}?${params}`);
+  const response = await fetch(`${BASE_URL}/search/shows?${params}`);
   const parsed = await response.json(); //as here, but unsure of syntax
 
 
-  interface showInterface {
-    id: number;
-    name: string;
-    summary: string;
-    image: string;
-  }
+
+
   let showData: showInterface[];
 
+  console.log("parsed", parsed);
+
   if (Array.isArray(parsed)) {
-    showData = parsed.map(show => {
+    showData = parsed.map(({ show }) => {
+
+      console.log("show", show);
+
       const { name, id, summary } = show;
-      const image = show.image.original;
+      const image = show?.image?.original;
+
 
       let showInfo: showInterface = {
         id,
         name,
-        summary,
-        image
+        summary
       };
+
+      if (image) showInfo.image = image;
+
       return showInfo;
     });
+
     return showData;
   }
 
@@ -73,7 +88,7 @@ async function searchShowsByTerm(term: string) {
 
 /** Given list of shows, create markup for each and to DOM */
 
-function populateShows(shows) {
+function populateShows(shows: showInterface[]) {
   $showsList.empty();
 
   for (let show of shows) {
@@ -81,8 +96,8 @@ function populateShows(shows) {
       `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
          <div class="media">
            <img
-              src="http://static.tvmaze.com/uploads/images/medium_portrait/160/401704.jpg"
-              alt="Bletchly Circle San Francisco"
+              src=${show.image ? show.image : DEFAULT_IMAGE}
+              alt=${show.name}
               class="w-25 me-3">
            <div class="media-body">
              <h5 class="text-primary">${show.name}</h5>
@@ -105,7 +120,7 @@ function populateShows(shows) {
  */
 
 async function searchForShowAndDisplay() {
-  const term = $("#searchForm-term").val();
+  const term = $("#searchForm-term").val()!;
   const shows = await searchShowsByTerm(term);
 
   $episodesArea.hide();
@@ -122,7 +137,27 @@ $searchForm.on("submit", async function (evt) {
  *      { id, name, season, number }
  */
 
-// async function getEpisodesOfShow(id) { }
+interface EpisodeInterface {
+  id: number;
+  name: string;
+  season: number;
+  number: number;
+}
+
+
+async function getEpisodesOfShow(id: number) {
+  const response = await fetch(`${BASE_URL}/shows/${id}/episodes`);
+  const data = await response.json();
+
+  const episodeData: EpisodeInterface[] = data.map(e => {
+
+    const { id, name, season, number } = e;
+    return { id, name, season, number };
+  });
+
+  return episodeData;
+
+}
 
 /** Write a clear docstring for this function... */
 
