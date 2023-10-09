@@ -10781,6 +10781,7 @@ var $ = jquery_1.default;
 var $showsList = $("#showsList");
 var $episodesArea = $("#episodesArea");
 var $searchForm = $("#searchForm");
+var $episodesList = $("#episodesList");
 var DEFAULT_IMAGE = "https://tinyurl.com/tv-missing";
 var BASE_URL = "https://api.tvmaze.com"; //?q=girls
 function searchShowsByTerm(term) {
@@ -10796,26 +10797,21 @@ function searchShowsByTerm(term) {
                     return [4 /*yield*/, response.json()];
                 case 2:
                     parsed = _a.sent();
-                    console.log("parsed", parsed);
-                    if (Array.isArray(parsed)) {
-                        showData = parsed.map(function (_a) {
-                            var _b;
-                            var show = _a.show;
-                            console.log("show", show);
-                            var name = show.name, id = show.id, summary = show.summary;
-                            var image = (_b = show === null || show === void 0 ? void 0 : show.image) === null || _b === void 0 ? void 0 : _b.original;
-                            var showInfo = {
-                                id: id,
-                                name: name,
-                                summary: summary
-                            };
-                            if (image)
-                                showInfo.image = image;
-                            return showInfo;
-                        });
-                        return [2 /*return*/, showData];
-                    }
-                    return [2 /*return*/];
+                    showData = parsed.map(function (_a) {
+                        var _b;
+                        var show = _a.show;
+                        var name = show.name, id = show.id, summary = show.summary;
+                        var image = (_b = show === null || show === void 0 ? void 0 : show.image) === null || _b === void 0 ? void 0 : _b.original;
+                        var showInfo = {
+                            id: id,
+                            name: name,
+                            summary: summary
+                        };
+                        if (image)
+                            showInfo.image = image;
+                        return showInfo;
+                    });
+                    return [2 /*return*/, showData];
             }
         });
     });
@@ -10842,6 +10838,7 @@ function searchForShowAndDisplay() {
                     return [4 /*yield*/, searchShowsByTerm(term)];
                 case 1:
                     shows = _a.sent();
+                    console.log("shows list is: ", shows);
                     $episodesArea.hide();
                     populateShows(shows);
                     return [2 /*return*/];
@@ -10863,6 +10860,9 @@ $searchForm.on("submit", function (evt) {
         });
     });
 });
+/** Given a show ID, get from API and return (promise) array of episodes:
+ *      { id, name, season, number }
+ */
 function getEpisodesOfShow(id) {
     return __awaiter(this, void 0, void 0, function () {
         var response, data, episodeData;
@@ -10874,17 +10874,46 @@ function getEpisodesOfShow(id) {
                     return [4 /*yield*/, response.json()];
                 case 2:
                     data = _a.sent();
-                    episodeData = data.map(function (e) {
-                        var id = e.id, name = e.name, season = e.season, number = e.number;
-                        return { id: id, name: name, season: season, number: number };
-                    });
+                    episodeData = data.map(function (e) { return ({ id: e.id, name: e.name, season: e.season, number: e.number }); });
                     return [2 /*return*/, episodeData];
             }
         });
     });
 }
-/** Write a clear docstring for this function... */
-// function populateEpisodes(episodes) { }
+/** find episodes based on showId number, then fill episodes List with
+ * the results of search.
+ */
+function searchEpisodesAndDisplay(showId) {
+    return __awaiter(this, void 0, void 0, function () {
+        var episodes;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, getEpisodesOfShow(showId)];
+                case 1:
+                    episodes = _a.sent();
+                    populateEpisodes(episodes);
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+$showsList.on("click", ".Show-getEpisodes", function (evt) {
+    var showId = $(evt.target).closest(".Show").data("show-id");
+    searchEpisodesAndDisplay(showId);
+});
+/** Takes episode interface array, then builds li elements for each.
+ * Each li will give name, season, and episode number. Once
+ * finished, it will display the episodes Area.
+*/
+function populateEpisodes(episodes) {
+    $episodesList.empty();
+    for (var _i = 0, episodes_1 = episodes; _i < episodes_1.length; _i++) {
+        var episode = episodes_1[_i];
+        var $listItem = $("\n    <li>\n    ".concat(episode.name, " (season ").concat(episode.season, ", number ").concat(episode.number, ")\n    </li>\n    "));
+        $episodesList.append($listItem);
+    }
+    $episodesArea.show();
+}
 
 
 /***/ })

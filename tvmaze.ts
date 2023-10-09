@@ -6,6 +6,8 @@ const $ = jQuery;
 const $showsList = $("#showsList");
 const $episodesArea = $("#episodesArea");
 const $searchForm = $("#searchForm");
+const $episodesList = $("#episodesList");
+
 
 const DEFAULT_IMAGE = "https://tinyurl.com/tv-missing";
 
@@ -27,62 +29,33 @@ interface showInterface {
 
 
 async function searchShowsByTerm(term: string) {
-  // ADD: Remove placeholder & make request to TVMaze search shows API.
 
   const params = new URLSearchParams({ q: term });
   const response = await fetch(`${BASE_URL}/search/shows?${params}`);
-  const parsed = await response.json(); //as here, but unsure of syntax
+  const parsed = await response.json() as []; //as here, but unsure of syntax
 
 
+  //TODO: is there a better way to handle data for a complex object like show,
+  //where we care only about a subset of fields for it?
+  //Any seems like an inefficient way to go about things
 
+  let showData: showInterface[] = parsed.map(({ show } : any) => {
 
-  let showData: showInterface[];
+    const { name, id, summary } = show;
+    const image = show?.image?.original;
 
-  console.log("parsed", parsed);
+    let showInfo: showInterface = {
+      id,
+      name,
+      summary
+    };
 
-  if (Array.isArray(parsed)) {
-    showData = parsed.map(({ show }) => {
+    if (image) showInfo.image = image;
 
-      console.log("show", show);
+    return showInfo;
+  });
 
-      const { name, id, summary } = show;
-      const image = show?.image?.original;
-
-
-      let showInfo: showInterface = {
-        id,
-        name,
-        summary
-      };
-
-      if (image) showInfo.image = image;
-
-      return showInfo;
-    });
-
-    return showData;
-  }
-
-
-
-  // return [
-  //   {
-  //     id: 1767,
-  //     name: "The Bletchley Circle",
-  //     summary:
-  //       `<p><b>The Bletchley Circle</b> follows the journey of four ordinary
-  //          women with extraordinary skills that helped to end World War II.</p>
-  //        <p>Set in 1952, Susan, Millie, Lucy and Jean have returned to their
-  //          normal lives, modestly setting aside the part they played in
-  //          producing crucial intelligence, which helped the Allies to victory
-  //          and shortened the war. When Susan discovers a hidden code behind an
-  //          unsolved murder she is met by skepticism from the police. She
-  //          quickly realises she can only begin to crack the murders and bring
-  //          the culprit to justice with her former friends.</p>`,
-  //     image:
-  //         "http://static.tvmaze.com/uploads/images/medium_portrait/147/369403.jpg"
-  //   }
-  // ]
+  return showData;
 }
 
 
@@ -118,11 +91,10 @@ function populateShows(shows: showInterface[]) {
 /** Handle search form submission: get shows from API and display.
  *    Hide episodes area (that only gets shown if they ask for episodes)
  */
-
 async function searchForShowAndDisplay() {
   const term = $("#searchForm-term").val()!;
   const shows = await searchShowsByTerm(term);
-
+  console.log("shows list is: ", shows);
   $episodesArea.hide();
   populateShows(shows);
 }
@@ -133,9 +105,7 @@ $searchForm.on("submit", async function (evt) {
 });
 
 
-/** Given a show ID, get from API and return (promise) array of episodes:
- *      { id, name, season, number }
- */
+
 
 interface EpisodeInterface {
   id: number;
@@ -144,21 +114,49 @@ interface EpisodeInterface {
   number: number;
 }
 
-
+/** Given a show ID, get from API and return (promise) array of episodes:
+ *      { id, name, season, number }
+ */
 async function getEpisodesOfShow(id: number) {
   const response = await fetch(`${BASE_URL}/shows/${id}/episodes`);
-  const data = await response.json();
+  const data = await response.json() as [];
 
-  const episodeData: EpisodeInterface[] = data.map(e => {
-
-    const { id, name, season, number } = e;
-    return { id, name, season, number };
-  });
+  const episodeData: EpisodeInterface[] = data.map((e: Record<string, any>) => (
+    { id: e.id, name: e.name, season: e.season, number: e.number }
+  ));
 
   return episodeData;
-
 }
 
-/** Write a clear docstring for this function... */
+/** find episodes based on showId number, then fill episodes List with
+ * the results of search.
+ */
+async function searchEpisodesAndDisplay(showId : number) {
+  const episodes = await getEpisodesOfShow(showId);
+  populateEpisodes(episodes);
+}
 
-// function populateEpisodes(episodes) { }
+$showsList.on("click", ".Show-getEpisodes", function (evt) {
+  const showId = $(evt.target).closest(".Show").data("show-id");
+  searchEpisodesAndDisplay(showId);
+});
+
+
+
+/** Takes episode interface array, then builds li elements for each.
+ * Each li will give name, season, and episode number. Once
+ * finished, it will display the episodes Area.
+*/
+function populateEpisodes(episodes: EpisodeInterface[]) {
+  $episodesList.empty();
+  for (const episode of episodes) {
+    const $listItem = $(`
+    <li>
+    ${episode.name} (season ${episode.season}, number ${episode.number})
+    </li>
+    `);
+
+    $episodesList.append($listItem);
+  }
+  $episodesArea.show();
+}
